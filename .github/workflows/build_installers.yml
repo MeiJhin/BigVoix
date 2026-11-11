@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-macos-pkg:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout BigVoix
         uses: actions/checkout@v4
@@ -50,3 +50,4 @@ jobs:
         with:
           name: BigVoix_macOS_Installer_PKG
           path: BigVoix_Mac_Installer_1.0.0.pkg
+
