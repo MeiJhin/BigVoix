@@ -1,0 +1,9 @@
+﻿build/
+build_mac/
+Installer/
+JUCE/
+JUCE
+*.user
+*.suo
+*.aps
+.vs/

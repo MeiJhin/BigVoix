@@ -1,0 +1,52 @@
+﻿name: Build BigVoix macOS Installer
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-macos-pkg:
+    runs-on: macos-14
+    steps:
+      - name: Checkout BigVoix
+        uses: actions/checkout@v4
+
+      - name: Clone JUCE 8
+        run: |
+          git clone --depth 1 --branch 8.0.4 https://github.com/juce-framework/JUCE.git JUCE
+
+      - name: Configure & Build Universal Binary (Apple Silicon + Intel)
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" \
+            -DJUCE_COPY_PLUGIN_AFTER_BUILD=OFF
+          cmake --build build --config Release --parallel
+
+      - name: Sign & Package macOS .pkg Installer
+        run: |
+          mkdir -p pkg_root/Library/Audio/Plug-Ins/VST3
+          mkdir -p pkg_root/Library/Audio/Plug-Ins/Components
+          mkdir -p pkg_root/Applications
+
+          cp -R "build/BigVoix_artefacts/Release/VST3/BigVoix.vst3" pkg_root/Library/Audio/Plug-Ins/VST3/
+          cp -R "build/BigVoix_artefacts/Release/AU/BigVoix.component" pkg_root/Library/Audio/Plug-Ins/Components/
+          cp -R "build/BigVoix_artefacts/Release/Standalone/BigVoix.app" pkg_root/Applications/
+
+          codesign --force --deep -s - pkg_root/Library/Audio/Plug-Ins/VST3/BigVoix.vst3
+          codesign --force --deep -s - pkg_root/Library/Audio/Plug-Ins/Components/BigVoix.component
+          codesign --force --deep -s - pkg_root/Applications/BigVoix.app
+
+          pkgbuild --root pkg_root \
+                   --identifier "com.bigaudio.bigvoix.pkg" \
+                   --version "1.0.0" \
+                   --install-location "/" \
+                   BigVoix_Mac_Installer_1.0.0.pkg
+
+      - name: Upload macOS .pkg Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BigVoix_macOS_Installer_PKG
+          path: BigVoix_Mac_Installer_1.0.0.pkg
